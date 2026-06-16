@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard,
@@ -19,9 +19,23 @@ import {
 } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout: authLogout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  const isGuestMode = localStorage.getItem('isGuest') === 'true';
+  const guestUser = isGuestMode ? JSON.parse(localStorage.getItem('guest_profile') || '{}') : null;
+  const activeUser = user || guestUser;
+
+  const logout = async () => {
+    try {
+      await authLogout();
+    } catch {
+      // Continue
+    }
+    localStorage.clear();
+    window.location.href = '/';
+  };
 
   const navigation = [
     { name: 'Dashboard', to: '/', icon: LayoutDashboard },
@@ -66,34 +80,36 @@ export const DashboardLayout: React.FC = () => {
             ))}
           </nav>
         </div>
-
         {/* User Footer Profile */}
         <div className="flex-shrink-0 flex border-t border-zinc-100 p-4">
           <div className="flex items-center w-full justify-between">
             <div className="flex items-center gap-3">
-              {user?.avatar ? (
+              {activeUser?.avatar ? (
                 <img
                   className="inline-block h-9 w-9 rounded-full object-cover border border-zinc-200"
-                  src={user.avatar}
-                  alt={user.name}
+                  src={activeUser.avatar}
+                  alt={activeUser.name}
                 />
               ) : (
                 <div className="inline-block h-9 w-9 rounded-full bg-zinc-100 flex items-center justify-center border border-zinc-200 text-zinc-600 text-xs font-semibold">
-                  {user?.name?.substring(0, 2).toUpperCase() || 'U'}
+                  {activeUser?.name?.substring(0, 2).toUpperCase() || 'U'}
                 </div>
               )}
               <div className="ml-1 select-none">
-                <p className="text-xs font-semibold text-zinc-900 max-w-[120px] truncate">{user?.name}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-zinc-900 max-w-[100px] truncate">{activeUser?.name}</p>
+                  {isGuestMode && <span className="text-[8px] font-bold px-1 py-0.2 bg-zinc-100 text-zinc-500 rounded border">Demo</span>}
+                </div>
                 <div className="flex items-center gap-1 mt-0.5 text-[10px] text-zinc-500">
                   <Award className="h-3 w-3 text-amber-500" />
-                  <span>Streak: {user?.streak || 0}d</span>
+                  <span>Streak: {activeUser?.streak || 0}d</span>
                 </div>
               </div>
             </div>
 
             <button
               onClick={logout}
-              className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-1.5 text-zinc-400 hover:text-red-650 hover:bg-red-50 rounded-lg transition-colors"
               title="Sign Out"
             >
               <LogOut className="h-4 w-4" />
@@ -106,7 +122,7 @@ export const DashboardLayout: React.FC = () => {
       <div className="md:pl-64 flex flex-col flex-1 w-full">
         <header className="sticky top-0 z-10 md:hidden bg-white border-b border-zinc-200 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-white font-bold text-sm shadow-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-950 text-white font-bold text-sm shadow-sm">
               🧭
             </div>
             <span className="font-bold text-zinc-900 tracking-tight text-base">PathForge AI</span>
@@ -157,7 +173,7 @@ export const DashboardLayout: React.FC = () => {
                     className={({ isActive }) =>
                       isActive
                         ? "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg bg-zinc-950 text-white shadow-sm"
-                        : "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+                        : "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-zinc-650 hover:bg-zinc-100 hover:text-zinc-950"
                     }
                   >
                     <item.icon className="h-4.5 w-4.5" />
@@ -169,11 +185,14 @@ export const DashboardLayout: React.FC = () => {
               <div className="flex-shrink-0 flex border-t border-zinc-100 p-4 justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="inline-block h-9 w-9 rounded-full bg-zinc-100 flex items-center justify-center border border-zinc-200 text-zinc-600 text-xs font-semibold">
-                    {user?.name?.substring(0, 2).toUpperCase() || 'U'}
+                    {activeUser?.name?.substring(0, 2).toUpperCase() || 'U'}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-zinc-900">{user?.name}</p>
-                    <p className="text-[10px] text-zinc-500">Streak: {user?.streak || 0}d</p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs font-semibold text-zinc-900">{activeUser?.name}</p>
+                      {isGuestMode && <span className="text-[8px] font-bold px-1 py-0.2 bg-zinc-100 text-zinc-500 rounded border">Demo</span>}
+                    </div>
+                    <p className="text-[10px] text-zinc-500">Streak: {activeUser?.streak || 0}d</p>
                   </div>
                 </div>
                 <button
@@ -181,7 +200,7 @@ export const DashboardLayout: React.FC = () => {
                     setMobileMenuOpen(false);
                     logout();
                   }}
-                  className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-1.5 text-zinc-400 hover:text-red-650 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -192,6 +211,22 @@ export const DashboardLayout: React.FC = () => {
 
         {/* Content Outlet */}
         <main className="flex-1 overflow-y-auto min-h-0">
+          {/* Guest/Offline Notice Bar */}
+          {((window as any).isBackendOffline || isGuestMode) && (
+            <div className="bg-zinc-950 text-white border-b border-zinc-800 text-center py-2 px-4 text-xs font-semibold select-none flex items-center justify-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>
+                {(window as any).isBackendOffline 
+                  ? 'Offline Demo Mode Active — Using Smart Local Analysis' 
+                  : 'Guest Demo Mode Active — Real AI analysis and cloud persistence require signing in.'}
+              </span>
+              {isGuestMode && (
+                <Link to="/register" className="underline underline-offset-2 ml-1 text-zinc-300 hover:text-white">
+                  Create Account
+                </Link>
+              )}
+            </div>
+          )}
           <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 md:px-8">
             <Outlet />
           </div>

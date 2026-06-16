@@ -29,9 +29,18 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    (window as any).isBackendOffline = false;
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+
+    // Detect network / connection issues
+    if (!error.response || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      (window as any).isBackendOffline = true;
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
@@ -57,7 +66,10 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         localStorage.removeItem('accessToken');
-        window.location.href = '/login';
+        // If in guest mode, don't force redirect
+        if (localStorage.getItem('isGuest') !== 'true') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -65,7 +77,7 @@ api.interceptors.response.use(
     }
 
     const message = (error.response?.data as { message?: string })?.message || 'Something went wrong';
-    if (error.response?.status !== 401) toast.error(message);
+    if (error.response?.status !== 401 && localStorage.getItem('isGuest') !== 'true') toast.error(message);
     return Promise.reject(error);
   }
 );
