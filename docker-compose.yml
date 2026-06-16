@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: pathforge_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - pathforge_network
+
+  backend:
+    build: ./backend
+    container_name: pathforge_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - FRONTEND_URL=http://localhost:5173
+      - MONGODB_URI=mongodb://mongodb:27017/ai-career-coach
+      - JWT_ACCESS_SECRET=your-super-secret-access-key-minimum-32-chars
+      - JWT_REFRESH_SECRET=your-super-secret-refresh-key-minimum-32-chars
+      - JWT_ACCESS_EXPIRES=15m
+      - JWT_REFRESH_EXPIRES=7d
+      - BCRYPT_ROUNDS=12
+      - GEMINI_API_KEY=your-gemini-api-key
+    depends_on:
+      - mongodb
+    networks:
+      - pathforge_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pathforge_frontend
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - pathforge_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  pathforge_network:
+    driver: bridge
